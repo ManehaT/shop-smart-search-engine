@@ -7,6 +7,8 @@ from django.contrib.auth import logout
 from .serializers import UserRegisterSerializer, ProductSerializer
 from rest_framework.views import APIView
 
+from rest_framework.permissions import AllowAny
+from rest_framework.decorators import permission_classes
 
 from django.http import HttpResponse
 
@@ -14,6 +16,9 @@ from django.contrib.auth.models import User
 from .models import Wishlist, Product, SearchLogs
 from django.db.models import Subquery
 from django.forms.models import model_to_dict
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.models import Token
+from rest_framework.response import Response
 
 @api_view(["POST",])
 def logout_user(request):
@@ -33,6 +38,7 @@ def logout_user(request):
         return Response({"Message": "You are logged out"}, status=status.HTTP_200_OK)
 
 @api_view(["POST",])
+@permission_classes([AllowAny]) #making route public
 def user_register_view(request):
     if request.method == "POST":
         try:
@@ -56,53 +62,10 @@ def user_register_view(request):
         return Response(data)
     
 
-
-
-from django.http import HttpResponse
-
 def home(request):
     return HttpResponse("Welcome to the Home Page!")
 
 
-# # Product Views
-# @api_view(["POST",])
-# def add_new_product(request):
-
-#     print(request.user)
-
-#     payload = request.body
-
-#     if not payload:
-#         response = {"error" : "No data found"}
-
-
-#     name = payload.get('name')
-
-#     return Response(response)
-
-
-
-
-# @api_view(["POST"])
-# def add_new_product(request):
-
-#     print(request.data)
-
-#     # return Response({"res" : request.data})
-
-#     payload = request.data
-
-#     print("CURRENT USER",request.user.username)
-#     payload['created_by'] = request.user.username
-#     serializer = ProductSerializer(data=payload)  # parses automatically?
-    
-#     if serializer.is_valid():
-#         serializer.save()  
-#         return Response(serializer.data, status=status.HTTP_201_CREATED)
-#     else:
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    
 @api_view(['GET'])
 def profile(request):
     if request.user.is_authenticated:
@@ -112,21 +75,12 @@ def profile(request):
             "email": user.email,
         })
     else:
-        # return Response({"error": "Unauthorized"})
         return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
-# @api_view(['GET'])
-# def wishlist(request):
-# # making place holder []
-#     wishlist_items = [
-#         {"id": 1, "name": "Sample Wishlist Item 1"},
-#         {"id": 2, "name": "Sample Wishlist Item 2"},
-#     ]
-#     return Response({"wishlist": wishlist_items})
 
 @api_view(['GET'])
 def search(request):
-    query = request.GET.get('q', '') #parameter just goes to an empty string
+    query = request.GET.get('q', '') 
     return Response({"search_query": query, "results": []})
 
 
@@ -174,17 +128,11 @@ class WishlistView(APIView):
         wishlist_item.update(status=False)
         return Response({"message": "Product removed from wishlist."}, status=status.HTTP_200_OK)
 
-    
 
+# login endpoimt
 
-        
-# @api_view(['GET'])
-# def view_wishlist(request):
-    
-#     # items = Wishlist.objects.filter(username=request.user, status=True)
-
-#     products = Product.objects.filter(id__in=Subquery(
-#         Wishlist.objects.filter(username=request.user, status=True).values('product_id')
-#     ))
-#     data = [model_to_dict(product) for product in products]
-#     return Response({"wishlist": data})
+class CustomAuthToken(ObtainAuthToken):
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        token = Token.objects.get(key=response.data['token'])
+        return Response({'token': token.key})

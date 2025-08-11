@@ -2,6 +2,7 @@ from .scrappers.gulahmed import gulahmed_scraping
 from .scrappers.khaadi import khaadi_scraping 
 from .scrappers.minnieminors import minnieminor_scraping 
 from .scrappers.diners import diners_scraping 
+from .scrappers.shoppingum import shoppingum_scraping
 
 def combined_scraper(query):
     results = []
@@ -23,6 +24,11 @@ def combined_scraper(query):
 
     try:
         results += diners_scraping(query)
+    except Exception as e:
+        print(f"[Diners] Error: {e}")
+
+    try:
+        results += shoppingum_scraping(query)
     except Exception as e:
         print(f"[Diners] Error: {e}")
 

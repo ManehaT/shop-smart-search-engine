@@ -6,12 +6,13 @@ urlpatterns = [
 
     # Authentication
     # 
-    path("login/", obtain_auth_token, name="login"),
+    # path("login/", obtain_auth_token, name="login"),
+    path("login/", views.CustomAuthToken.as_view(), name="login"),   # <- use your CustomAuthToken
     path("logout/", views.logout_user, name="logout_user"),
     path("register/", views.user_register_view, name="register"),
 
     # GET - Get all products
-    path("products", views.ProductView.as_view(), name ="products"),
+    path("products/", views.ProductView.as_view(), name ="products"),
 
 
     # Wishlist URL

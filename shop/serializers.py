@@ -31,7 +31,7 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = ["name","image_url","product_url","category","brand","price","sale_price", "created_by"]
 
-        def create(self, validated_data):
-            user = self.context['request'].user
-            validated_data['created_by'] = user.username  # or user.id if FK
-            return super().create(validated_data)
+    def create(self, validated_data):
+        user = self.context['request'].user
+        validated_data['created_by'] = user.username  # or user.id if FK
+        return super().create(validated_data)

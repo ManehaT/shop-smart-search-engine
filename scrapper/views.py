@@ -13,12 +13,13 @@ def search_view(request):
 
         # Save scraped products to DB
         for item in results:
+            print(f"Scraped brand: {item.get('brand')}")  # debug print brands
             if not Product.objects.filter(product_url=item['link']).exists():
                 Product.objects.get_or_create(
                     product_url=item['link'],
                     defaults={
-                        'category': "Test",
-                        'brand': "Test",
+                        'category': "category",
+                        'brand': item.get("brand", "Test"),
                         'created_by': request.user if request.user.is_authenticated else "",
                         'name': item['name'],
                         'image_url': item['image'],
