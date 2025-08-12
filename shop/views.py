@@ -15,6 +15,8 @@ from django.http import HttpResponse
 from django.contrib.auth.models import User
 from .models import Wishlist, Product, SearchLogs
 from django.db.models import Subquery
+from django.db.models import Q
+
 from django.forms.models import model_to_dict
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
@@ -78,11 +80,36 @@ def profile(request):
         return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
+# @api_view(['GET'])
+# def search(request):
+#     query = request.GET.get('q', '') 
+#     return Response({"search_query": query, "results": []})
+
+
+#updated search view 
 @api_view(['GET'])
 def search(request):
-    query = request.GET.get('q', '') 
-    return Response({"search_query": query, "results": []})
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return Response({"error": "No search query provided."}, status=status.HTTP_400_BAD_REQUEST)
 
+    # Filter products
+    products = Product.objects.filter(
+        status="active"
+    ).filter(
+        Q(name__icontains=query) | Q(brand__icontains=query)
+        # models.Q(name__icontains=query) | models.Q(brand__icontains=query)
+    )
+
+    # Save search logs if user is authenticated
+    if request.user.is_authenticated:
+        SearchLogs.objects.create(
+            query_string=query,
+            username=request.user
+        )
+
+    data = [model_to_dict(product) for product in products]
+    return Response({"search_query": query, "results": data}, status=status.HTTP_200_OK)
 
 class ProductView(APIView):
 

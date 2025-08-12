@@ -42,6 +42,12 @@ class SearchLogs(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
     
-    def save(self):
-        self.keyword = decode_keyword(self.query_string)
-        super().save()
+    # def save(self):
+    #     self.keyword = decode_keyword(self.query_string)
+    #     super().save()
+
+    #updated save because it wants args
+    def save(self, *args, **kwargs):
+            self.keyword = decode_keyword(self.query_string)
+            super().save(*args, **kwargs)
+        

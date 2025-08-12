@@ -18,7 +18,7 @@ urlpatterns = [
     # Wishlist URL
     # POST - Add to Wishlist
     # GET - Products in wishlist
-    path("wishlist", views.WishlistView.as_view(), name ="wishlist"),
+    path("home/wishlist/", views.WishlistView.as_view(), name ="wishlist"),
 
     
 ]

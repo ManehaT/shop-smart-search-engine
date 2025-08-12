@@ -9,12 +9,26 @@ def search_view(request):
 
     try:
         results = combined_scraper(query)
+        print("Resultas: ", results)
 
 
         # Save scraped products to DB
         for item in results:
+            # print(f"Scraped brand: {item.get('brand')}")  # debug print brands
             print(f"Scraped brand: {item.get('brand')}")  # debug print brands
+            
+            print("About to insert product with values:")
+            print(f"name: {item['name']}")
+            print(f"brand: {item.get('brand', 'Test')}")
+            print(f"product_url: {item['link']}")
+            print(f"image_url: {item['image']}")
+            print(f"price: {item['price']}")
+            print(f"sale_price: {item['sale_price']}")
+            print(f"created_by: {request.user if request.user.is_authenticated else ''}")
+            print("-----")
+
             if not Product.objects.filter(product_url=item['link']).exists():
+                print("HERE")
                 Product.objects.get_or_create(
                     product_url=item['link'],
                     defaults={
@@ -27,6 +41,7 @@ def search_view(request):
                         'sale_price': item['sale_price'],
                     }
                 )
+                print("HERE")
 
         return JsonResponse({"results": results}, status=200)
     except Exception as e:
