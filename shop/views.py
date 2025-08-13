@@ -98,9 +98,14 @@ def search(request):
         status="active"
     ).filter(
         Q(name__icontains=query) | Q(brand__icontains=query)
-        # models.Q(name__icontains=query) | models.Q(brand__icontains=query)
+    ).values(
+        'id', 'name', 'brand', 'price', 'sale_price', 'image_url'
     )
-
+    """
+  
+        products = Product.objects.filter(id__in=wishlist_product_ids).values('id', 'name', 'price','sale_price','image_url')
+        return Response(list(products), status=status.HTTP_200_OK)
+        """
     # Save search logs if user is authenticated
     if request.user.is_authenticated:
         SearchLogs.objects.create(
@@ -108,9 +113,9 @@ def search(request):
             username=request.user
         )
 
-    data = [model_to_dict(product) for product in products]
-    return Response({"search_query": query, "results": data}, status=status.HTTP_200_OK)
 
+    return Response({"search_query": query, "results": serializer.data}, status=status.HTTP_200_OK)
+    
 class ProductView(APIView):
 
     permission_classes = []
@@ -130,7 +135,7 @@ class WishlistView(APIView):
             username=request.user, status=True
         ).values_list('product_id', flat=True)
 
-        products = Product.objects.filter(id__in=wishlist_product_ids).values('id', 'name', 'price')
+        products = Product.objects.filter(id__in=wishlist_product_ids).values('id', 'name', 'price','sale_price','image_url')
         return Response(list(products), status=status.HTTP_200_OK)
 
     def post(self, request):
