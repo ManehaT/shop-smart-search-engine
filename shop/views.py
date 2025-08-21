@@ -80,50 +80,113 @@ def profile(request):
         return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
-# @api_view(['GET'])
-# def search(request):
-#     query = request.GET.get('q', '') 
-#     return Response({"search_query": query, "results": []})
-
-
-#updated search view 
 @api_view(['GET'])
 def search(request):
+    # get the search term from FE
     query = request.GET.get('q', '').strip()
-    if not query:
-        return Response({"error": "No search query provided."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Filter products
-    products = Product.objects.filter(
-        status="active"
-    ).filter(
-        Q(name__icontains=query) | Q(brand__icontains=query)
-    ).values(
-        'id', 'name', 'brand', 'price', 'sale_price', 'image_url'
-    )
-    """
-  
-        products = Product.objects.filter(id__in=wishlist_product_ids).values('id', 'name', 'price','sale_price','image_url')
-        return Response(list(products), status=status.HTTP_200_OK)
-        """
-    # Save search logs if user is authenticated
+    #get last 5 search keyword
     if request.user.is_authenticated:
-        SearchLogs.objects.create(
-            query_string=query,
-            username=request.user
+        recent_logs = SearchLogs.objects.filter(
+            username=request.user,
+            status=True
+        ).order_by('-created_at')[:5]
+        recent_keywords = [log.keyword for log in recent_logs]
+    else:
+        recent_keywords = []
+
+    # If a search query is provided, use it
+    if query:
+        products = Product.objects.filter(
+            status="active"
+        ).filter(
+            Q(name__icontains=query) | Q(brand__icontains=query)
         )
 
+        # Save search logs
+        if request.user.is_authenticated:
+            SearchLogs.objects.create(
+                query_string=query,
+                username=request.user
+            )
 
+    # If no query, show products based on recent searches
+    else:
+        if recent_keywords:
+            products = Product.objects.filter(status="active").filter(
+                Q(name__icontains=recent_keywords[0]) | Q(brand__icontains=recent_keywords[0])
+            )
+            for kw in recent_keywords[1:]:
+                products = products | Product.objects.filter(
+                    status="active"
+                ).filter(
+                    Q(name__icontains=kw) | Q(brand__icontains=kw)
+                )
+            products = products.distinct()
+        else:
+            # fallback: show all active products
+            products = Product.objects.filter(status="active")
+
+    serializer = ProductSerializer(products, many=True)
     return Response({"search_query": query, "results": serializer.data}, status=status.HTTP_200_OK)
-    
-class ProductView(APIView):
 
-    permission_classes = []
+
+    # if not query:
+    #     return Response({"error": "No search query provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # # Filter active products in the products table
+    # products = Product.objects.filter(
+    #     status="active"
+    # ).filter(
+    #     Q(name__icontains=query) | Q(brand__icontains=query)
+    # )
+    
+    # #converts into json friendly format
+    # serializer = ProductSerializer(products, many = True)
+    # # Save search logs if user is authenticated
+    # if request.user.is_authenticated:
+    #     SearchLogs.objects.create(
+    #         query_string=query,
+    #         username=request.user
+    #     )
+
+
+    # return Response({"search_query": query, "results": serializer.data}, status=status.HTTP_200_OK)
+    
+# class ProductView(APIView):
+
+#     permission_classes = []
+
+#     def get(self, request):
+
+#         products = Product.objects.filter(status='active').all()
+#         data = [model_to_dict(product) for product in products]
+#         return Response(data, status=status.HTTP_200_OK)
+class ProductView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
+        user = request.user  # Get the User object, not just username
+        print("User is: ", user.username)
 
-        products = Product.objects.filter(status='active').all()
-        data = [model_to_dict(product) for product in products]
+        # Default products
+        products_qs = Product.objects.filter(status='active')
+
+        if user.is_authenticated:
+            # Get latest search logs for this user - filter by User object
+            last_log = SearchLogs.objects.filter(username=user).order_by('-created_at').first()
+
+            if last_log:
+                # Example: filter products where name/category/brand contains keyword
+                keyword = last_log.keyword
+                products_qs = products_qs.filter(
+                    Q(name__icontains=keyword) |
+                    Q(category__icontains=keyword) |
+                    Q(brand__icontains=keyword)
+                )
+
+        # Convert queryset to list of dicts
+        data = [model_to_dict(product) for product in products_qs]
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -134,6 +197,9 @@ class WishlistView(APIView):
         wishlist_product_ids = Wishlist.objects.filter(
             username=request.user, status=True
         ).values_list('product_id', flat=True)
+
+        print(request.user.username)
+
 
         products = Product.objects.filter(id__in=wishlist_product_ids).values('id', 'name', 'price','sale_price','image_url')
         return Response(list(products), status=status.HTTP_200_OK)

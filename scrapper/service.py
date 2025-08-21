@@ -32,6 +32,8 @@ def combined_scraper(query):
     except Exception as e:
         print(f"[Diners] Error: {e}")
 
+    # print("RESULTS: ", results)
+
     return results
 
 # import requests
